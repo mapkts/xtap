@@ -1,0 +1,24 @@
+[package]
+name = "xtap"
+version = "0.1.0"
+authors = ["Aaron Taner <mapkts@gmail.com>"]
+description = "A tabular data processing toolkit for xlsx/csv files."
+license = "MIT OR Apache-2.0"
+homepage = "https://github.com/mapkts/xtap"
+repository = "https://github.com/mapkts/xtap"
+documentation = "https://docs.rs/xtap"
+readme = "README.md"
+edition = "2021"
+
+[lib]
+name = "xtap"
+path = "src/lib/lib.rs"
+
+[[bin]]
+name = "xtap"
+path = "src/cli/main.rs"
+
+[dependencies]
+clap = "2.33.3"
+log = "0.4"
+
