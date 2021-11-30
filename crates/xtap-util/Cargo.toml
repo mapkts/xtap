@@ -1,0 +1,28 @@
+[package]
+name = "xtap-util"
+version = "0.1.0"
+authors = ["Aaron Taner <mapkts@gmail.com>"]
+description = "Miscellaneous utilities used by xtap."
+license = "MIT OR Apache-2.0"
+homepage = "https://github.com/mapkts/xtap"
+repository = "https://github.com/mapkts/xtap"
+documentation = "https://docs.rs/xtap-util"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0"
+termcolor = "1.1"
+atty = "0.2"
+libc = "0.2"
+
+[target.'cfg(windows)'.dependencies.winapi]
+version = "0.3"
+features = [
+    "fileapi",
+    "handleapi",
+    "memoryapi",
+    "processenv",
+    "winbase",
+    "wincon",
+    "winnt",
+]

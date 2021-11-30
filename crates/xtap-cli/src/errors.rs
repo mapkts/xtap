@@ -1,4 +1,4 @@
-use crate::util::Shell;
+use xtap_util::Shell;
 
 pub type CliError = anyhow::Error;
 

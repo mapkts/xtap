@@ -221,11 +221,24 @@ name = "xtap"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "atty",
  "clap",
- "libc",
  "log",
  "pretty_env_logger",
+ "xtap-core",
+ "xtap-util",
+]
+
+[[package]]
+name = "xtap-core"
+version = "0.1.0"
+
+[[package]]
+name = "xtap-util"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "atty",
+ "libc",
  "termcolor",
  "winapi",
 ]

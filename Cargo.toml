@@ -1,40 +1,6 @@
-[package]
-name = "xtap"
-version = "0.1.0"
-authors = ["Aaron Taner <mapkts@gmail.com>"]
-description = "A tabular data processing toolkit for xlsx/csv files."
-license = "MIT OR Apache-2.0"
-homepage = "https://github.com/mapkts/xtap"
-repository = "https://github.com/mapkts/xtap"
-documentation = "https://docs.rs/xtap"
-readme = "README.md"
-edition = "2021"
-
-[lib]
-name = "xtap"
-path = "src/lib/lib.rs"
-
-[[bin]]
-name = "xtap"
-path = "src/cli/main.rs"
-
-[dependencies]
-anyhow = "1.0"
-clap = "2.33.3"
-log = "0.4"
-pretty_env_logger = "0.4"
-termcolor = "1.1"
-atty = "0.2"
-libc = "0.2"
-
-[target.'cfg(windows)'.dependencies.winapi]
-version = "0.3"
-features = [
-    "fileapi",
-    "handleapi",
-    "memoryapi",
-    "processenv",
-    "winbase",
-    "wincon",
-    "winnt",
+[workspace]
+members = [
+    "crates/xtap-cli",
+    "crates/xtap-core",
+    "crates/xtap-util",
 ]

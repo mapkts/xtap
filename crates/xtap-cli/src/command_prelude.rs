@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-pub use clap::{Arg, ArgMatches, AppSettings};
+pub use clap::{AppSettings, Arg, ArgMatches};
 
 pub type App = clap::App<'static, 'static>;
 

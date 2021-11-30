@@ -1,8 +1,6 @@
 use std::fmt;
 use std::io::prelude::*;
 
-use crate::errors::CliResult;
-
 use termcolor::Color::{Cyan, Green, Red, Yellow};
 use termcolor::{self, Color, ColorSpec, StandardStream, WriteColor};
 
@@ -90,7 +88,7 @@ impl ShellOut {
         message: Option<&dyn fmt::Display>,
         color: Color,
         justified: bool,
-    ) -> CliResult<()> {
+    ) -> anyhow::Result<()> {
         match *self {
             ShellOut::Stream { stdout: ref mut stderr, .. } => {
                 stderr.reset()?;
@@ -240,7 +238,7 @@ impl Shell {
         message: Option<&dyn fmt::Display>,
         color: Color,
         justified: bool,
-    ) -> CliResult<()> {
+    ) -> anyhow::Result<()> {
         if self.needs_clear {
             self.err_erase_line();
         }
@@ -248,7 +246,10 @@ impl Shell {
     }
 
     /// Prints a red `error` message.
-    pub fn error<T: fmt::Display>(&mut self, message: T) -> CliResult<()> {
+    pub fn error<T: fmt::Display>(
+        &mut self,
+        message: T,
+    ) -> anyhow::Result<()> {
         if self.needs_clear {
             self.err_erase_line();
         }
@@ -256,7 +257,7 @@ impl Shell {
     }
 
     /// Prints a yellow `warning` message.
-    pub fn warn<T: fmt::Display>(&mut self, message: T) -> CliResult<()> {
+    pub fn warn<T: fmt::Display>(&mut self, message: T) -> anyhow::Result<()> {
         if self.needs_clear {
             self.err_erase_line();
         }
@@ -264,7 +265,7 @@ impl Shell {
     }
 
     /// Prints a cyan `note` message.
-    pub fn note<T: fmt::Display>(&mut self, message: T) -> CliResult<()> {
+    pub fn note<T: fmt::Display>(&mut self, message: T) -> anyhow::Result<()> {
         if self.needs_clear {
             self.err_erase_line();
         }
@@ -272,7 +273,7 @@ impl Shell {
     }
 
     /// Shortcut to right-align and green color a status message.
-    pub fn status<T, U>(&mut self, status: T, message: U) -> CliResult<()>
+    pub fn status<T, U>(&mut self, status: T, message: U) -> anyhow::Result<()>
     where
         T: fmt::Display,
         U: fmt::Display,
@@ -280,7 +281,7 @@ impl Shell {
         self.print(&status, Some(&message), Green, true)
     }
 
-    pub fn status_header<T, U>(&mut self, status: T) -> CliResult<()>
+    pub fn status_header<T, U>(&mut self, status: T) -> anyhow::Result<()>
     where
         T: fmt::Display,
     {
@@ -293,7 +294,7 @@ impl Shell {
         status: T,
         message: U,
         color: Color,
-    ) -> CliResult<()>
+    ) -> anyhow::Result<()>
     where
         T: fmt::Display,
         U: fmt::Display,
@@ -302,7 +303,10 @@ impl Shell {
     }
 
     /// Updates the color choice.
-    pub fn set_color_choice(&mut self, color: Option<&str>) -> CliResult<()> {
+    pub fn set_color_choice(
+        &mut self,
+        color: Option<&str>,
+    ) -> anyhow::Result<()> {
         if let ShellOut::Stream {
             ref mut stdout,
             ref mut stderr,
@@ -352,6 +356,7 @@ mod imp {
     use super::{Shell, TtyWidth};
     use std::mem;
 
+    #[allow(clippy::useless_conversion)]
     pub fn stderr_width() -> TtyWidth {
         unsafe {
             let mut winsize: libc::winsize = mem::zeroed();

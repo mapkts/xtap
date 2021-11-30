@@ -5,10 +5,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::command_prelude::CommandInfo;
-use crate::commands;
-use crate::consts::BIN_NAME;
 use crate::errors::CliResult;
-use crate::util::lev_distance::closest_msg;
 
 pub fn execute_external_command(cmd: &str, args: &[&str]) -> CliResult<()> {
     let path = find_external_subcommand(cmd);
@@ -16,7 +13,8 @@ pub fn execute_external_command(cmd: &str, args: &[&str]) -> CliResult<()> {
         Some(command) => command,
         None => {
             let suggestions = list_commands();
-            let did_you_mean = closest_msg(cmd, suggestions.keys(), |c| c);
+            let did_you_mean =
+                xtap_util::closest_msg(cmd, suggestions.keys(), |c| c);
             let err = anyhow::format_err!(
                 "no such subcommand: `{}`{}",
                 cmd,
@@ -33,8 +31,7 @@ pub fn execute_external_command(cmd: &str, args: &[&str]) -> CliResult<()> {
 }
 
 fn find_external_subcommand(cmd: &str) -> Option<PathBuf> {
-    let command_exe =
-        format!("{}-{}{}", BIN_NAME, cmd, env::consts::EXE_SUFFIX);
+    let command_exe = format!("xtap-{}{}", cmd, env::consts::EXE_SUFFIX);
     search_directories()
         .iter()
         .map(|dir| dir.join(&command_exe))
