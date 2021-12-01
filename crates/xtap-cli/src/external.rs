@@ -5,9 +5,10 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::command_prelude::CommandInfo;
+use crate::commands;
 use crate::errors::CliResult;
 
-pub fn execute_external_command(cmd: &str, args: &[&str]) -> CliResult<()> {
+pub fn execute_external_subcommand(cmd: &str, args: &[&str]) -> CliResult {
     let path = find_external_subcommand(cmd);
     let command = match path {
         Some(command) => command,
@@ -25,8 +26,8 @@ pub fn execute_external_command(cmd: &str, args: &[&str]) -> CliResult<()> {
     };
 
     match Command::new(&command).args(args).spawn() {
-        Ok(_) => return Ok(()),
-        Err(e) => return Err(e.into()),
+        Ok(_) => Ok(()),
+        Err(e) => Err(e.into()),
     }
 }
 
@@ -71,7 +72,7 @@ where
     path.as_ref().is_file()
 }
 
-fn list_commands() -> BTreeMap<String, CommandInfo> {
+pub fn list_commands() -> BTreeMap<String, CommandInfo> {
     let prefix = "xtap-";
     let suffix = env::consts::EXE_SUFFIX;
     let mut commands = BTreeMap::new();
@@ -102,14 +103,14 @@ fn list_commands() -> BTreeMap<String, CommandInfo> {
         }
     }
 
-    // for cmd in commands::builtin() {
-    //     commands.insert(
-    //         cmd.get_name().to_string(),
-    //         CommandInfo::BuiltIn {
-    //             about: cmd.p.meta.about.map(|s| s.to_string()),
-    //         },
-    //     );
-    // }
+    for cmd in commands::builtin() {
+        commands.insert(
+            cmd.get_name().to_string(),
+            CommandInfo::BuiltIn {
+                about: cmd.p.meta.about.map(|s| s.to_string()),
+            },
+        );
+    }
 
     commands
 }

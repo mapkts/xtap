@@ -2,7 +2,7 @@ use xtap_util::Shell;
 
 pub type CliError = anyhow::Error;
 
-pub type CliResult<T> = Result<T, CliError>;
+pub type CliResult = Result<(), CliError>;
 
 pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
     debug!("exit_with_error; err={:?}", err);
