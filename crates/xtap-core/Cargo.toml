@@ -2,9 +2,13 @@
 name = "xtap-core"
 version = "0.1.0"
 authors = ["Aaron Taner <mapkts@gmail.com>"]
-description = "xtap as library"
+description = "xtap as a library"
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/mapkts/xtap"
 repository = "https://github.com/mapkts/xtap"
-documentation = "https://docs.rs/xtap"
+documentation = "https://docs.rs/xtap-core"
 edition = "2021"
+
+[dependencies]
+calamine = { version = "0.18.0", features = ["dates"] }
+csv = "1.1"

@@ -1,3 +1,4 @@
+#[doc(hidden)]
 #[macro_export]
 macro_rules! __shell_print {
     ($shell:expr, $which:ident, $newline:literal, $($arg:tt)*) => ({

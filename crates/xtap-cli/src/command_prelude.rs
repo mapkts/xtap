@@ -1,5 +1,4 @@
 use clap::SubCommand;
-use std::ffi::OsString;
 use std::path::PathBuf;
 
 pub use crate::errors::{CliError, CliResult};

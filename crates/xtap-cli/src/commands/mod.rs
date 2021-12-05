@@ -4,6 +4,7 @@ use crate::errors::CliResult;
 use xtap_util::Shell;
 
 pub mod list;
+pub mod merge;
 
 pub fn builtin() -> Vec<App> {
     vec![list::cli()]

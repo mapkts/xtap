@@ -26,7 +26,8 @@ pub fn execute_external_subcommand(cmd: &str, args: &[&str]) -> CliResult {
     };
 
     match Command::new(&command).args(args).spawn() {
-        Ok(_) => Ok(()),
+        // waits for the child process to exit before returning.
+        Ok(mut child) => child.wait().map(|_| ()).map_err(|e| e.into()),
         Err(e) => Err(e.into()),
     }
 }
