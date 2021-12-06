@@ -1,7 +1,10 @@
+use std::{fmt, slice};
+
+use bstr::BString;
 use calamine::{CellErrorType, DataType};
 use csv::{ByteRecord, ByteRecordIter};
-use std::slice;
 
+/// A single xlsx/csv record.
 #[derive(Clone, PartialEq)]
 pub struct Record(RecordInner);
 
@@ -9,6 +12,23 @@ pub struct Record(RecordInner);
 enum RecordInner {
     Csv(ByteRecord),
     Xlsx(Vec<DataType>),
+}
+
+impl fmt::Debug for Record {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.0 {
+            RecordInner::Csv(ref record) => {
+                let mut fields = vec![];
+                for field in record {
+                    fields.push(BString::from(field));
+                }
+                write!(f, "Record::Csv({:?})", fields)
+            }
+            RecordInner::Xlsx(ref record) => {
+                write!(f, "Record::Xlsx({:?})", record)
+            }
+        }
+    }
 }
 
 impl From<ByteRecord> for Record {
@@ -30,21 +50,56 @@ impl From<&[DataType]> for Record {
 }
 
 impl Record {
+    /// Returns the field at index `i`.
+    ///
+    /// If no field at index `i` exists, then this returns `None`.
+    #[inline]
+    pub fn get(&self, i: usize) -> Option<Field<'_>> {
+        match self.0 {
+            RecordInner::Csv(ref record) => record.get(i).map(|x| x.into()),
+            RecordInner::Xlsx(ref record) => record.get(i).map(|x| x.into()),
+        }
+    }
+
+    /// Returns an iterator over all fields in this record.
+    #[inline]
     pub fn iter(&self) -> RecordIter {
         match &self.0 {
-            RecordInner::Csv(record) => {
-                RecordIter(IterInner::CsvRecord(record.iter()))
-            }
-            RecordInner::Xlsx(record) => {
-                RecordIter(IterInner::XlsxRecord(record.iter()))
-            }
+            RecordInner::Csv(record) => RecordIter(IterInner::CsvRecord(record.iter())),
+            RecordInner::Xlsx(record) => RecordIter(IterInner::XlsxRecord(record.iter())),
+        }
+    }
+
+    /// Returns the number of fields in this record.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.iter().len()
+    }
+
+    /// Returns true if this record is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Returns the underlying xlsx/csv record stored in this struct.
+    ///
+    /// If `self` is a csv record, then this will return `(Some(ByteRecord), None)`.
+    /// If `self` is a xlsx record, then this will return `(None, Some(Vec<DataType>)`.
+    pub fn into_inner(self) -> (Option<ByteRecord>, Option<Vec<DataType>>) {
+        match self.0 {
+            RecordInner::Csv(record) => (Some(record), None),
+            RecordInner::Xlsx(record) => (None, Some(record)),
         }
     }
 }
 
+/// A double-ended iterator over all fields in a record.
+///
+/// The `'r` lifetime refers to the lifetime of the `Record` that is being iterated over.
 pub struct RecordIter<'r>(IterInner<'r>);
 
-pub enum IterInner<'r> {
+enum IterInner<'r> {
     CsvRecord(ByteRecordIter<'r>),
     XlsxRecord(slice::Iter<'r, DataType>),
 }
@@ -56,15 +111,7 @@ impl<'r> Iterator for RecordIter<'r> {
     fn next(&mut self) -> Option<Self::Item> {
         match &mut self.0 {
             IterInner::CsvRecord(iter) => iter.next().map(Field::Binary),
-            IterInner::XlsxRecord(iter) => iter.next().map(|x| match x {
-                DataType::Int(int) => Field::Int(*int),
-                DataType::Float(float) => Field::Float(*float),
-                DataType::String(string) => Field::String(string.as_str()),
-                DataType::Bool(boolean) => Field::Bool(*boolean),
-                DataType::Error(err) => Field::Error(err),
-                DataType::DateTime(datetime) => Field::DateTime(*datetime),
-                DataType::Empty => Field::Empty,
-            }),
+            IterInner::XlsxRecord(iter) => iter.next().map(|x| x.into()),
         }
     }
 
@@ -92,19 +139,22 @@ impl<'r> DoubleEndedIterator for RecordIter<'r> {
     fn next_back(&mut self) -> Option<Field<'r>> {
         match &mut self.0 {
             IterInner::CsvRecord(iter) => iter.next_back().map(Field::Binary),
-            IterInner::XlsxRecord(iter) => iter.next_back().map(|x| match x {
-                DataType::Int(int) => Field::Int(*int),
-                DataType::Float(float) => Field::Float(*float),
-                DataType::String(string) => Field::String(string.as_str()),
-                DataType::Bool(boolean) => Field::Bool(*boolean),
-                DataType::Error(err) => Field::Error(err),
-                DataType::DateTime(datetime) => Field::DateTime(*datetime),
-                DataType::Empty => Field::Empty,
-            }),
+            IterInner::XlsxRecord(iter) => iter.next_back().map(|x| x.into()),
         }
     }
 }
 
+impl<'r> IntoIterator for &'r Record {
+    type Item = Field<'r>;
+    type IntoIter = RecordIter<'r>;
+
+    #[inline]
+    fn into_iter(self) -> RecordIter<'r> {
+        self.iter()
+    }
+}
+
+/// A borrowed view into a field in a `Record`.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Field<'r> {
     Binary(&'r [u8]),
@@ -118,11 +168,11 @@ pub enum Field<'r> {
 }
 
 macro_rules! field_partial_eq {
-    ($variant:path, $other:ty) => {
+    ($variant:ident, $other:ty) => {
         impl<'r> PartialEq<$other> for Field<'r> {
             fn eq(&self, other: &$other) -> bool {
                 match *self {
-                    $variant(ref x) if *x == *other => true,
+                    Field::$variant(ref x) if *x == *other => true,
                     _ => false,
                 }
             }
@@ -130,12 +180,12 @@ macro_rules! field_partial_eq {
     };
 }
 
-field_partial_eq!(Field::Binary, &'r [u8]);
-field_partial_eq!(Field::String, &'r str);
-field_partial_eq!(Field::Int, i64);
-field_partial_eq!(Field::Float, f64);
-field_partial_eq!(Field::Bool, bool);
-field_partial_eq!(Field::Error, &'r CellErrorType);
+field_partial_eq!(Binary, &'r [u8]);
+field_partial_eq!(String, &'r str);
+field_partial_eq!(Int, i64);
+field_partial_eq!(Float, f64);
+field_partial_eq!(Bool, bool);
+field_partial_eq!(Error, &'r CellErrorType);
 
 impl<'r> PartialEq<()> for Field<'r> {
     fn eq(&self, _: &()) -> bool {
@@ -144,21 +194,21 @@ impl<'r> PartialEq<()> for Field<'r> {
 }
 
 macro_rules! field_from_type {
-    ($variant:path, $ty:ty) => {
+    ($variant:ident, $ty:ty) => {
         impl<'r> From<$ty> for Field<'r> {
             fn from(v: $ty) -> Self {
-                $variant(v)
+                Field::$variant(v)
             }
         }
     };
 }
 
-field_from_type!(Field::Binary, &'r [u8]);
-field_from_type!(Field::String, &'r str);
-field_from_type!(Field::Int, i64);
-field_from_type!(Field::Float, f64);
-field_from_type!(Field::Bool, bool);
-field_from_type!(Field::Error, &'r CellErrorType);
+field_from_type!(Binary, &'r [u8]);
+field_from_type!(String, &'r str);
+field_from_type!(Int, i64);
+field_from_type!(Float, f64);
+field_from_type!(Bool, bool);
+field_from_type!(Error, &'r CellErrorType);
 
 impl<'r> From<()> for Field<'r> {
     fn from(_: ()) -> Self {
@@ -174,6 +224,20 @@ where
         match v {
             Some(v) => From::from(v),
             None => Field::Empty,
+        }
+    }
+}
+
+impl<'r> From<&'r DataType> for Field<'r> {
+    fn from(v: &'r DataType) -> Field<'r> {
+        match v {
+            DataType::Int(int) => Field::Int(*int),
+            DataType::Float(float) => Field::Float(*float),
+            DataType::String(string) => Field::String(string.as_str()),
+            DataType::Bool(boolean) => Field::Bool(*boolean),
+            DataType::Error(err) => Field::Error(err),
+            DataType::DateTime(datetime) => Field::DateTime(*datetime),
+            DataType::Empty => Field::Empty,
         }
     }
 }

@@ -12,3 +12,4 @@ edition = "2021"
 [dependencies]
 calamine = { version = "0.18.0", features = ["dates"] }
 csv = "1.1"
+bstr = "0.2"
