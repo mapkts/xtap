@@ -2,19 +2,17 @@ use std::fs::File;
 use std::io;
 use std::path::Path;
 
-use crate::Record;
-
-use calamine::Reader;
+use crate::{Record, Trim};
 
 /// A xlsx/csv file merger.
 #[derive(Debug)]
-pub struct Merger<R> {
+pub struct Merger {
     /// The files to merge.
-    sources: Vec<R>,
+    sources: Vec<File>,
     /// The underlying csv data reader.
-    csv_rdr: Option<io::BufReader<R>>,
+    csv_rdr: Option<io::BufReader<File>>,
     /// The underlying xlsx data reader.
-    xlsx_rdr: Option<io::BufReader<R>>,
+    xlsx_rdr: Option<io::BufReader<File>>,
     /// The tracking state.
     state: MergerState,
 }
@@ -33,7 +31,7 @@ struct MergerState {
     /// The number of fields in the first record in each source.
     first_field_count: Option<u32>,
     /// Various skip options.
-    skip: Skip,
+    skip: Option<Skip>,
     /// Indicates whether the presence of ending newline in each source should be forced.
     force_ending_newline: Option<Newline>,
 }
@@ -68,6 +66,36 @@ pub enum Newline {
 pub struct MergerBuilder {
     /// The capacity of `io::BufReader`.
     capacity: usize,
-    /// Whether source contains headers.
+    /// Whether data contains headers.
     has_headers: bool,
+    /// The whitespace trim behaviour.
+    trim: Trim,
+    /// Various skip options.
+    skip: Option<Skip>,
+    /// Newline style.
+    newline: Newline,
+}
+
+impl Default for MergerBuilder {
+    fn default() -> Self {
+        MergerBuilder {
+            capacity: 8 * (1 << 10),
+            has_headers: true,
+            trim: Trim::default(),
+            skip: Default::default(),
+            #[cfg(windows)]
+            newline: Newline::Crlf,
+            #[cfg(not(windows))]
+            newline: Newline::Lf,
+        }
+    }
+}
+
+impl MergerBuilder {
+    /// Create a new merger builder.
+    ///
+    /// To convert a builder into a merger, call one of the methods starting with `from_`.
+    pub fn new() -> MergerBuilder {
+        MergerBuilder::default()
+    }
 }
