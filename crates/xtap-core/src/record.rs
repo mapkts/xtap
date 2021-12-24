@@ -65,8 +65,12 @@ impl Record {
     #[inline]
     pub fn iter(&self) -> RecordIter {
         match &self.0 {
-            RecordInner::Csv(record) => RecordIter(IterInner::CsvRecord(record.iter())),
-            RecordInner::Xlsx(record) => RecordIter(IterInner::XlsxRecord(record.iter())),
+            RecordInner::Csv(record) => {
+                RecordIter(IterInner::CsvRecord(record.iter()))
+            }
+            RecordInner::Xlsx(record) => {
+                RecordIter(IterInner::XlsxRecord(record.iter()))
+            }
         }
     }
 
@@ -110,7 +114,7 @@ impl<'r> Iterator for RecordIter<'r> {
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         match &mut self.0 {
-            IterInner::CsvRecord(iter) => iter.next().map(Field::Binary),
+            IterInner::CsvRecord(iter) => iter.next().map(Field::Bytes),
             IterInner::XlsxRecord(iter) => iter.next().map(|x| x.into()),
         }
     }
@@ -138,7 +142,7 @@ impl<'r> DoubleEndedIterator for RecordIter<'r> {
     #[inline]
     fn next_back(&mut self) -> Option<Field<'r>> {
         match &mut self.0 {
-            IterInner::CsvRecord(iter) => iter.next_back().map(Field::Binary),
+            IterInner::CsvRecord(iter) => iter.next_back().map(Field::Bytes),
             IterInner::XlsxRecord(iter) => iter.next_back().map(|x| x.into()),
         }
     }
@@ -157,8 +161,8 @@ impl<'r> IntoIterator for &'r Record {
 /// A borrowed view into a field in a `Record`.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Field<'r> {
-    Binary(&'r [u8]),
-    String(&'r str),
+    Bytes(&'r [u8]),
+    Str(&'r str),
     Int(i64),
     Float(f64),
     Bool(bool),
@@ -180,8 +184,8 @@ macro_rules! field_partial_eq {
     };
 }
 
-field_partial_eq!(Binary, &'r [u8]);
-field_partial_eq!(String, &'r str);
+field_partial_eq!(Bytes, &'r [u8]);
+field_partial_eq!(Str, &'r str);
 field_partial_eq!(Int, i64);
 field_partial_eq!(Float, f64);
 field_partial_eq!(Bool, bool);
@@ -203,8 +207,8 @@ macro_rules! field_from_type {
     };
 }
 
-field_from_type!(Binary, &'r [u8]);
-field_from_type!(String, &'r str);
+field_from_type!(Bytes, &'r [u8]);
+field_from_type!(Str, &'r str);
 field_from_type!(Int, i64);
 field_from_type!(Float, f64);
 field_from_type!(Bool, bool);
@@ -233,7 +237,7 @@ impl<'r> From<&'r DataType> for Field<'r> {
         match v {
             DataType::Int(int) => Field::Int(*int),
             DataType::Float(float) => Field::Float(*float),
-            DataType::String(string) => Field::String(string.as_str()),
+            DataType::String(string) => Field::Str(string.as_str()),
             DataType::Bool(boolean) => Field::Bool(*boolean),
             DataType::Error(err) => Field::Error(err),
             DataType::DateTime(datetime) => Field::DateTime(*datetime),

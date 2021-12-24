@@ -1,17 +1,15 @@
-use std::fs::File;
-use std::io;
-use std::io::{prelude::*, BufReader};
+use std::fs::{File, OpenOptions};
+use std::io::prelude::*;
+use std::io::Result;
 use std::path::Path;
 
 use crate::{Record, Trim};
 
 /// A xlsx/csv file merger.
 #[derive(Debug)]
-pub struct Merger {
+pub struct Merger<R> {
     /// The files to merge.
-    sources: Vec<File>,
-    /// The underlying data reader.
-    rdr: Option<io::BufReader<File>>,
+    sources: Vec<R>,
     /// The tracking state.
     state: MergerState,
 }
@@ -37,6 +35,16 @@ struct MergerState {
     force_ending_newline: bool,
     /// Capacity of the `rdr`.
     capacity: usize,
+}
+
+impl Default for MergerState {
+    fn default() -> MergerState {
+        MergerState {
+            capacity: 8 * (1 << 10),
+            has_headers: true,
+            ..Default::default()
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -66,22 +74,54 @@ pub enum Newline {
     Crlf,
 }
 
-impl Merger {
-    /// Creates a new merger with default configurations.
-    pub fn new() -> Merger {
-        Default::default()
+impl<R: Read> Merger<R> {
+    /// Creates a new merger with default configuration for the given readers.
+    ///
+    /// To build a custom merger, use `MergerBuilder`.
+    pub fn from_readers(readers: Vec<R>) -> Merger<R> {
+        Merger {
+            sources: readers,
+            state: Default::default(),
+        }
     }
 
     /// Returns a new [`MergerBuilder`] for configuring a custom merger.
     pub fn builder() -> MergerBuilder {
         MergerBuilder::new()
     }
+
+    /// Merges the contents of the underlying readers into the given `wtr` in the given `format`.
+    ///
+    /// Note that the given `wtr` is buffered automatically, so you should not wrap `wtr` in a
+    /// buffered writer like `io::BufWriter`.
+    pub fn into_writer<W: Write>(self, wtr: W, format: Format) -> Result<()> {
+        todo!()
+    }
+
+    /// Merges the contents of the underlying readers into the given file path.
+    ///
+    /// This function will overwrite the contents of the given file path.
+    pub fn into_path<P: AsRef<Path>>(self, path: P) -> Result<()> {
+        let mut file = OpenOptions::new().write(true).truncate(true).open(path)?;
+        todo!()
+    }
 }
 
-impl Default for Merger {
-    fn default() -> Merger {
-        MergerBuilder::default().build()
+impl Merger<File> {
+    pub fn from_paths<P: AsRef<Path>>(paths: Vec<P>) -> Result<Merger<File>> {
+        let files: Result<Vec<File>> = paths.into_iter().map(|p| File::open(p)).collect();
+        Ok(Merger {
+            sources: files?,
+            state: Default::default(),
+        })
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Format {
+    Csv,
+    Xlsx,
+    Plain,
 }
 
 /// A builder used for configuring a custom merger.
@@ -125,10 +165,12 @@ impl MergerBuilder {
     /// ```
     /// use xtap_core::{Trim, MergerBuilder};
     ///
+    /// let readers = vec!["from reader 1".as_bytes(), "from reader 2".as_bytes()];
+    ///
     /// let mut merger = MergerBuilder::new()
     ///     .trim(Trim::All)
     ///     .force_ending_newline(true)
-    ///     .build();
+    ///     .from_readers(readers);
     /// ```
     pub fn new() -> MergerBuilder {
         MergerBuilder::default()
@@ -251,16 +293,17 @@ impl MergerBuilder {
         self
     }
 
-    /// Consumes this builder and returns a configured [`Merger`].
+    /// Builds a [`Merger`] from this configuration that reads data from the given readers.
     ///
-    /// Once a [`Merger`] has been built, its configuration cannot be changed.
-    pub fn build(self) -> Merger {
+    /// Note that the readers are buffered automatically, so you should not wrap any reader in a
+    /// buffered reader like `io::BufReader`.
+    pub fn from_readers<R: Read>(&self, readers: Vec<R>) -> Merger<R> {
         let state = MergerState {
             headers: None,
             has_headers: self.has_headers,
             max_field_count: None,
             first_field_count: None,
-            skip: self.skip,
+            skip: self.skip.clone(),
             capacity: self.capacity,
             newline: self.newline,
             force_ending_newline: self.force_ending_newline,
@@ -268,8 +311,33 @@ impl MergerBuilder {
 
         Merger {
             state,
-            sources: vec![],
-            rdr: None,
+            sources: readers,
         }
+    }
+
+    /// Builds a [`Merger`] from this configuration that reads data from the given file paths.
+    ///
+    /// # Errors
+    ///
+    /// If there was any problem opening the given file paths, then this returns the corresponding
+    /// error.
+    pub fn from_paths<P: AsRef<Path>>(&self, paths: Vec<P>) -> Result<Merger<File>> {
+        let files: Result<Vec<File>> = paths.into_iter().map(|p| File::open(p)).collect();
+
+        let state = MergerState {
+            headers: None,
+            has_headers: self.has_headers,
+            max_field_count: None,
+            first_field_count: None,
+            skip: self.skip.clone(),
+            capacity: self.capacity,
+            newline: self.newline,
+            force_ending_newline: self.force_ending_newline,
+        };
+
+        Ok(Merger {
+            sources: files?,
+            state,
+        })
     }
 }
