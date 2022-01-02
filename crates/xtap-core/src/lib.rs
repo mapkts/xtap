@@ -1,10 +1,9 @@
-pub mod csv;
-pub mod reader;
-pub mod xlsx;
-
+mod drop;
 mod merger;
+mod reader;
 mod record;
 
+pub use crate::drop::Drop;
 pub use crate::merger::{Merger, MergerBuilder};
 pub use crate::record::{Field, Record, RecordIter};
 

@@ -13,3 +13,4 @@ edition = "2021"
 calamine = { version = "0.18.0", features = ["dates"] }
 csv = "1.1"
 bstr = "0.2"
+encoding = "0.2.33"

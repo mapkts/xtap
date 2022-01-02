@@ -1,9 +1,8 @@
+use crate::{Record, Trim};
 use std::fs::{File, OpenOptions};
 use std::io::prelude::*;
 use std::io::Result;
 use std::path::Path;
-
-use crate::{Record, Trim};
 
 /// A xlsx/csv file merger.
 #[derive(Debug)]
@@ -79,10 +78,7 @@ impl<R: Read> Merger<R> {
     ///
     /// To build a custom merger, use `MergerBuilder`.
     pub fn from_readers(readers: Vec<R>) -> Merger<R> {
-        Merger {
-            sources: readers,
-            state: Default::default(),
-        }
+        Merger { sources: readers, state: Default::default() }
     }
 
     /// Returns a new [`MergerBuilder`] for configuring a custom merger.
@@ -102,18 +98,17 @@ impl<R: Read> Merger<R> {
     ///
     /// This function will overwrite the contents of the given file path.
     pub fn into_path<P: AsRef<Path>>(self, path: P) -> Result<()> {
-        let mut file = OpenOptions::new().write(true).truncate(true).open(path)?;
+        let mut file =
+            OpenOptions::new().write(true).truncate(true).open(path)?;
         todo!()
     }
 }
 
 impl Merger<File> {
     pub fn from_paths<P: AsRef<Path>>(paths: Vec<P>) -> Result<Merger<File>> {
-        let files: Result<Vec<File>> = paths.into_iter().map(|p| File::open(p)).collect();
-        Ok(Merger {
-            sources: files?,
-            state: Default::default(),
-        })
+        let files: Result<Vec<File>> =
+            paths.into_iter().map(|p| File::open(p)).collect();
+        Ok(Merger { sources: files?, state: Default::default() })
     }
 }
 
@@ -121,7 +116,7 @@ impl Merger<File> {
 pub enum Format {
     Csv,
     Xlsx,
-    Plain,
+    Bytes,
 }
 
 /// A builder used for configuring a custom merger.
@@ -203,8 +198,12 @@ impl MergerBuilder {
     }
 
     /// Skips a given number of rows from the head of each file. If `trailing_only` was given
-    /// `true`, then the head of the the first file is left untouched.
-    pub fn skip_head(&mut self, count: usize, trailing_only: bool) -> &mut Self {
+    /// `true`, then the head of the the first file is preserved.
+    pub fn skip_head(
+        &mut self,
+        count: usize,
+        trailing_only: bool,
+    ) -> &mut Self {
         match self.skip.as_mut() {
             Some(skip) => skip.head = (count, trailing_only),
             None => {
@@ -220,14 +219,16 @@ impl MergerBuilder {
 
     /// Skips a given number of rows from the tail of each file. If `leading_only` was given
     /// `true`, then the tail of the last file is preserved.
-    pub fn skip_tail(&mut self, count: usize, leading_only: bool) -> &mut Self {
+    pub fn skip_tail(
+        &mut self,
+        count: usize,
+        leading_only: bool,
+    ) -> &mut Self {
         match self.skip.as_mut() {
             Some(skip) => skip.tail = (count, leading_only),
             None => {
-                let skip = Skip {
-                    tail: (count, leading_only),
-                    ..Default::default()
-                };
+                let skip =
+                    Skip { tail: (count, leading_only), ..Default::default() };
                 self.skip = Some(skip);
             }
         }
@@ -239,10 +240,7 @@ impl MergerBuilder {
         match self.skip.as_mut() {
             Some(skip) => skip.non_max_length = yes,
             None => {
-                let skip = Skip {
-                    non_max_length: yes,
-                    ..Default::default()
-                };
+                let skip = Skip { non_max_length: yes, ..Default::default() };
                 self.skip = Some(skip);
             }
         }
@@ -266,7 +264,7 @@ impl MergerBuilder {
 
     /// Skips any row if its the given `indexes` of fields is empty.
     ///
-    /// Both `Field::Binary([])` and `Field::Empty` are considered empty.
+    /// Both `Field::Bytes([])` and `Field::Empty` are considered empty.
     pub fn skip_fields_empty(&mut self, indexes: Vec<usize>) -> &mut Self {
         match self.skip.as_mut() {
             Some(skip) => skip.fields_is_empty = Some(indexes),
@@ -309,10 +307,7 @@ impl MergerBuilder {
             force_ending_newline: self.force_ending_newline,
         };
 
-        Merger {
-            state,
-            sources: readers,
-        }
+        Merger { state, sources: readers }
     }
 
     /// Builds a [`Merger`] from this configuration that reads data from the given file paths.
@@ -321,8 +316,12 @@ impl MergerBuilder {
     ///
     /// If there was any problem opening the given file paths, then this returns the corresponding
     /// error.
-    pub fn from_paths<P: AsRef<Path>>(&self, paths: Vec<P>) -> Result<Merger<File>> {
-        let files: Result<Vec<File>> = paths.into_iter().map(|p| File::open(p)).collect();
+    pub fn from_paths<P: AsRef<Path>>(
+        &self,
+        paths: Vec<P>,
+    ) -> Result<Merger<File>> {
+        let files: Result<Vec<File>> =
+            paths.into_iter().map(|p| File::open(p)).collect();
 
         let state = MergerState {
             headers: None,
@@ -335,9 +334,6 @@ impl MergerBuilder {
             force_ending_newline: self.force_ending_newline,
         };
 
-        Ok(Merger {
-            sources: files?,
-            state,
-        })
+        Ok(Merger { sources: files?, state })
     }
 }
